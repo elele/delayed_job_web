@@ -39,7 +39,7 @@ class TestDelayedJobWeb < Test::Unit::TestCase
   end
 
   # basic smoke test all the tabs
-  %w(overview enqueued working pending failed stats).each do |tab|
+  %w(overview enqueued working scheduled failed).each do |tab|
     should "get '/#{tab}'" do
       get "/#{tab}"
       should_respond_with_success

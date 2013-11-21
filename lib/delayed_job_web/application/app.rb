@@ -37,9 +37,8 @@ class DelayedJobWeb < Sinatra::Base
       {:name => 'Overview', :path => '/overview'},
       {:name => 'Enqueued', :path => '/enqueued'},
       {:name => 'Working', :path => '/working'},
-      {:name => 'Pending', :path => '/pending'},
-      {:name => 'Failed', :path => '/failed'},
-      {:name => 'Stats', :path => '/stats'}
+      {:name => 'Scheduled', :path => '/scheduled'},
+      {:name => 'Failed', :path => '/failed'}
     ]
   end
 
@@ -60,43 +59,46 @@ class DelayedJobWeb < Sinatra::Base
     end
   end
 
-  get '/stats' do
-    haml :stats
-  end
-
-  %w(enqueued working pending failed).each do |page|
+  %w(enqueued working scheduled failed).each do |page|
     get "/#{page}" do
-      @jobs = delayed_jobs(page.to_sym).order('created_at desc, id desc').offset(start).limit(per_page)
+      @jobs = delayed_jobs(page.to_sym).order('updated_at DESC').offset(start).limit(per_page)
       @all_jobs = delayed_jobs(page.to_sym)
       haml page.to_sym
     end
   end
 
-  get "/remove/:id" do
+  get "/delete/:id" do
     delayed_job.find(params[:id]).delete
-    redirect back
-  end
-
-  get "/requeue/:id" do
-    job = delayed_job.find(params[:id])
-    job.update_attributes(:run_at => Time.now, :failed_at => nil)
     redirect back
   end
 
   get "/reload/:id" do
     job = delayed_job.find(params[:id])
-    job.update_attributes(:run_at => Time.now, :failed_at => nil, :locked_by => nil, :locked_at => nil, :last_error => nil, :attempts => 0)
+    job.run_at = Time.now
+    job.failed_at = nil
+    job.locked_by = nil
+    job.locked_at = nil
+    job.attempts = 0
+    job.last_error = nil
+    job.save!
     redirect back
   end
 
-  post "/failed/clear" do
-    delayed_job.destroy_all(delayed_job_sql(:failed))
+  post "/failed/reload" do
+    delayed_jobs(:failed).update_all(
+      :run_at => Time.now,
+      :failed_at => nil,
+      :locked_by => nil,
+      :locked_at => nil,
+      :attempts => 0,
+      :last_error => nil
+    )
+    redirect back
+  end
+
+  post "/failed/delete" do
+    delayed_jobs(:failed).delete_all
     redirect u('failed')
-  end
-
-  post "/requeue/all" do
-    delayed_jobs(:failed).update_all(:run_at => Time.now, :failed_at => nil)
-    redirect back
   end
 
   def delayed_jobs(type)
@@ -106,13 +108,13 @@ class DelayedJobWeb < Sinatra::Base
   def delayed_job_sql(type)
     case type
     when :enqueued
-      ''
+      'locked_at IS NULL AND failed_at IS NULL AND (run_at IS NULL OR run_at <= now())'
     when :working
-      'locked_at is not null'
+      'locked_at IS NOT NULL AND failed_at IS NULL'
     when :failed
-      'last_error is not null'
-    when :pending
-      'attempts = 0'
+      'failed_at IS NOT NULL'
+    when :scheduled
+      'locked_at IS NULL AND failed_at IS NULL AND run_at > now()'
     end
   end
 
@@ -127,7 +129,7 @@ class DelayedJobWeb < Sinatra::Base
     @partial = false
   end
 
-  %w(overview enqueued working pending failed stats) .each do |page|
+  %w(overview enqueued working scheduled failed) .each do |page|
     get "/#{page}.poll" do
       show_for_polling(page)
     end

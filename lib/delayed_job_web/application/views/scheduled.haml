@@ -1,10 +1,7 @@
 %h1
-  Pending
-- if @jobs.any?
-  %form{:method => 'POST', :action => u('requeue/all')}
-    %input{:type => 'submit', :value => 'Enqueue All Immediately'}
+  Scheduled
 %p.sub
-  The list below contains jobs currently being processed.
+  The list below contains jobs that have not reached the time they are scheduled to run.
 %p.sub= "Showing #{start} to #{start + per_page} of #{@all_jobs.count} pending jobs."
 %ul.job
   - @jobs.each do |job|

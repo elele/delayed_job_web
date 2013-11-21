@@ -5,11 +5,9 @@
       %a{:name => job.id}
       %a{:href => "##{job.id}"}=job.id
       %div.controls
-        %a{:rel => 'retry', :href => u("requeue/#{job.id}")}Retry
+        %a{:rel => 'retry', :href => u("reload/#{job.id}")}Reload
         or
-        %a{:rel => 'remove', :href => u("remove/#{job.id}")}Remove
-        or
-        %a{:rel => 'reload_job', :href => u("reload/#{job.id}")}Reload Job
+        %a{:rel => 'remove', :href => u("delete/#{job.id}")}Delete
     %dt Priority
     %dd= job.priority
     %dt Attempts
