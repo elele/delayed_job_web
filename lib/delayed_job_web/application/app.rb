@@ -108,13 +108,13 @@ class DelayedJobWeb < Sinatra::Base
   def delayed_job_sql(type)
     case type
     when :enqueued
-      'locked_at IS NULL AND failed_at IS NULL AND (run_at IS NULL OR run_at <= now())'
+      'locked_at IS NULL AND failed_at IS NULL AND (run_at IS NULL OR run_at <= sysdate)'
     when :working
       'locked_at IS NOT NULL AND failed_at IS NULL'
     when :failed
       'failed_at IS NOT NULL'
     when :scheduled
-      'locked_at IS NULL AND failed_at IS NULL AND run_at > now()'
+      'locked_at IS NULL AND failed_at IS NULL AND run_at > sysdate'
     end
   end
 
